@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from github import Github, GithubException
 from datetime import date
-
+import datetime
+from matplotlib.ticker import MaxNLocator
 
 def print_usage_and_exit():
     print("Uso:")
@@ -31,8 +32,8 @@ def check_positive_integer(param):
     return value
 
 
-def calculate_actual_and_bins(issues, days, show):
-    actual = np.full(days, issues.totalCount, dtype=float)
+def calculate_actual_and_bins(issues, issueCount, days, show):
+    actual = np.full(days, issueCount, dtype=float)
     bins = np.zeros(days)
     closed_issues = [issue for issue in issues if issue.closed_at is not None]
     closed_issues.sort(key=lambda x: x.closed_at, reverse=False)
@@ -67,6 +68,8 @@ def create_burndown_chart(days, sprint, actual, ideal, bins):
     fig, ax = plt.subplots()
     x = np.arange(days)
 
+    print(actual)
+
     ax.plot(x, ideal, linestyle="dashed", color="green", label="Ideal")
     ax.step(x, actual, where="post", label="Actual")
     ax.bar(x, bins, width=0.2, color="orange", label="Completed tasks")
@@ -74,6 +77,8 @@ def create_burndown_chart(days, sprint, actual, ideal, bins):
     ax.set_title(f"Burn down chart for Sprint {sprint}")
     ax.set_ylabel("Remaining and completed tasks")
     ax.legend(loc="upper right")
+    
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     plt.xticks(x, [f"Day\n{ix}" for ix in x])
     plt.savefig("burndownchart.png")
@@ -90,9 +95,15 @@ def main():
         print(f"Errore: {e.data.get('message'), 'Token non valido o problema di accesso al repository.'}")
         sys.exit()
 
-    issues = repo.get_issues(state='all', labels=['task', f"s0{args['sprint']}"])
-    actual, bins = calculate_actual_and_bins(issues, args['days'], args['show'])
-    ideal = np.linspace(issues.totalCount, 0, args['days'])
+    issues = repo.get_issues(state='all', labels=['Task'], since=datetime.datetime(2024, 9, 1))
+    counter = 0
+    for issue in issues:
+        print(issue.title)
+        counter += 1
+
+    print(counter)
+    actual, bins = calculate_actual_and_bins(issues, counter, args['days'], args['show'])
+    ideal = np.linspace(counter, 0, args['days'])
 
     create_burndown_chart(args['days'], args['sprint'], actual, ideal, bins)
 
